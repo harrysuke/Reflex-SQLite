@@ -42,6 +42,11 @@ To launch both the frontend development server and the backend API server simult
 ```bash
 reflex run
 ```
+OR
+```bach
+uv run reflex run
+```
+
 The application will automatically initialize the local SQLite database and spin up the web interface, typically accessible at `http://localhost:3000`.
 
 ## API Usage
