@@ -1,0 +1,1 @@
+export default ({ ["styles"] : ({ ["global"] : ({ [":root"] : ({  }), ["body"] : ({ ["fontFamily"] : "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif", ["--default-font-family"] : "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif", ["backgroundColor"] : "#F5F7FB", ["color"] : "#111827" }) }) }) })

@@ -1,0 +1,21 @@
+# Core application -----------------------------------------------------------
+reflex[db]==0.10.1
+sqlmodel>=0.0.24,<0.1
+python-dotenv>=1.0,<2
+openpyxl>=3.1,<4
+
+# Data manipulation ---------------------------------------------------------
+numpy>=2.1,<2.3
+pandas>=2.2,<3
+
+# Visualization --------------------------------------------------------------
+matplotlib>=3.9,<4
+seaborn>=0.13,<0.14
+
+# Machine learning -----------------------------------------------------------
+scikit-learn>=1.5,<2
+
+# Optional heavy deep-learning runtimes --------------------------------------
+# Install with:  pip install -r requirements-ml.txt
+# They are intentionally NOT required: the sidebar reports availability and
+# the app keeps working (with a clear install hint) when they are absent.

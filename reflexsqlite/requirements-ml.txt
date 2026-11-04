@@ -1,0 +1,5 @@
+# Optional deep-learning runtimes for the PyTorch / TensorFlow sidebar engines.
+# Windows + Python 3.13: tensorflow-cpu provides the `tensorflow` import without CUDA.
+# On Linux/macOS you may substitute `tensorflow==2.20.0` instead.
+torch>=2.4,<3
+tensorflow-cpu==2.20.0
