@@ -300,6 +300,7 @@ def models():
     return shell(
         "Predictive Models",
         "Offline training, a joblib model registry, live inference and drift monitoring",
+        ui.notice_banner(ModelsState.env_warning, "warning"),
         _training_card(),
         _active_card(),
         _registry_card(),

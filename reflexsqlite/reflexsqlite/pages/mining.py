@@ -446,6 +446,7 @@ def mining():
     return shell(
         "Data Mining",
         "DuckDB OLAP, Polars out-of-core scans, K-Means/HDBSCAN segmentation and association rules",
+        ui.notice_banner(MiningState.env_warning, "warning"),
         _dataset_card(),
         _clustering_card(),
         _association_card(),

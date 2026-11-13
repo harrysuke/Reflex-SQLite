@@ -17,19 +17,60 @@ def _print(data: Any) -> None:
     print(json.dumps(data, indent=2, ensure_ascii=False, default=str))
 
 
-def _cmd_check(_args: argparse.Namespace) -> int:
-    from ._optional import availability
+def _cmd_check(args: argparse.Namespace) -> int:
+    from ._optional import diagnostics
     from .paths import database_path, models_dir, uploads_dir
 
-    _print({
-        "paths": {
-            "database": str(database_path()),
-            "models": str(models_dir()),
-            "uploads": str(uploads_dir()),
-        },
-        "libraries": availability(),
-    })
-    return 0
+    report = diagnostics()
+    paths = {
+        "database": str(database_path()),
+        "models": str(models_dir()),
+        "uploads": str(uploads_dir()),
+    }
+
+    if getattr(args, "json", False):
+        _print({"paths": paths, **report})
+        return 0 if report["ready"] else 1
+
+    python = report["python"]
+    print("DataForge environment check")
+    print("-" * 68)
+    print(f"interpreter : {python['executable']}")
+    print(f"version     : {python['version']}"
+          f" ({'virtualenv' if python['virtual_env'] else 'system/base Python'})")
+    print(f"database    : {paths['database']}")
+    print(f"models      : {paths['models']}")
+    print(f"uploads     : {paths['uploads']}")
+    print()
+
+    for group in report["groups"]:
+        flag = "required" if group["required"] else "optional"
+        print(f"[{group['tier']}] ({flag})")
+        for row in group["rows"]:
+            status = row["status"].upper().ljust(8)
+            version_text = row["version"] or "-"
+            print(f"  {status} {row['label']:<14} {version_text}")
+            if row["status"] != "ok" and row["error"]:
+                print(f"           {row['error']}")
+        print()
+
+    if report["ready"]:
+        print("All required libraries are importable. Everything is ready.")
+        return 0
+
+    print("Required libraries are missing or broken:")
+    for module in report["missing"]:
+        print(f"  - {report['packages'][module]['label']} is not installed")
+    for module in report["broken"]:
+        print(f"  - {report['packages'][module]['label']} is installed but cannot be imported")
+    print()
+    print("Fix everything at once, for THIS interpreter:")
+    print(f"  {report['fix']}")
+    print()
+    print("Or install the failing package alone:")
+    for module in [*report["missing"], *report["broken"]]:
+        print(f"  {report['packages'][module]['fix']}")
+    return 1
 
 
 def _cmd_train(args: argparse.Namespace) -> int:
@@ -83,7 +124,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ml_pipelines", description="DataForge offline ML pipelines")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("check", help="Show resolved paths and optional-library availability").set_defaults(func=_cmd_check)
+    check = sub.add_parser(
+        "check",
+        help="Verify that every dependency imports in the current interpreter",
+    )
+    check.add_argument("--json", action="store_true", help="Machine-readable report")
+    check.set_defaults(func=_cmd_check)
 
     train = sub.add_parser("train", help="Train a model from SQLite and save models/<name>.joblib")
     train.add_argument("--dataset-id", type=int, required=True)

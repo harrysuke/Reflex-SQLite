@@ -61,6 +61,15 @@ class ExploreState(AuthState):
         return registry.is_available(self.active_library)
 
     @rx.var
+    def library_install_command(self) -> str:
+        return registry.install_command(self.active_library)
+
+    @rx.var
+    def run_disabled(self) -> bool:
+        """Block the Run button up front instead of failing after the click."""
+        return self.is_running or not registry.is_available(self.active_library)
+
+    @rx.var
     def library_version(self) -> str:
         return registry.installed_version(self.active_library)
 

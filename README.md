@@ -80,6 +80,11 @@ package for statistical modelling, predictive analytics and large-scale mining.
    cd reflexsqlite
    pip install -r requirements.txt
    ```
+   Or let the bootstrap script create a project `.venv` and install everything
+   into it (recommended — it also verifies that each library imports):
+   ```bash
+   python scripts/bootstrap.py
+   ```
 3. Initialize the Reflex project (first run only):
    ```bash
    reflex init
@@ -91,18 +96,45 @@ package for statistical modelling, predictive analytics and large-scale mining.
 cd reflexsqlite
 reflex run
 ```
-Alternatively, with `uv`:
+Alternatively, with `uv` — note that `uv add reflex` alone is **not** enough, it
+installs only the web framework and leaves pandas/scipy missing:
 
 ```bash
 cd reflexsqlite
-uv init
-uv add reflex
+uv venv
+uv pip install -r requirements.txt
 uv run reflex run
 ```
 
 The app initializes the SQLite schema (including `model_logs` and `ml_models`),
 seeds demo data on an empty database, warm-starts the active `.joblib` model, and
 serves the UI at `http://localhost:3000`.
+
+### Troubleshooting: "pandas is not available"
+
+This means the Python process running the **backend** cannot import the package.
+It is almost always an environment mismatch, not a code problem: `reflex run`
+only requires Reflex, so a bare `pip install reflex` / `uv add reflex` boots the
+UI and then fails on the first pandas call.
+
+Diagnose it with the interpreter that runs the app:
+
+```bash
+python -m ml_pipelines check
+```
+
+It prints the exact interpreter path, the real import status of every library,
+and the command that fixes it. Two ways to resolve:
+
+* **Install the missing packages into that interpreter**
+  ```bash
+  "<the interpreter printed above>" -m pip install -r reflexsqlite/requirements.txt
+  ```
+* **Use the audited environment** created by `python scripts/bootstrap.py`, then
+  start the app with `.venv/Scripts/python.exe -m reflex run`.
+
+The same audit is available in the UI under **Settings → Dependency audit**,
+which imports each library for real and shows the per-package fix command.
 
 ## Pages
 

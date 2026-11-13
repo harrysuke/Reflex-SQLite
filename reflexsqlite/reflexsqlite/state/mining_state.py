@@ -9,6 +9,8 @@ import asyncio
 
 import reflex as rx
 
+from ml_pipelines import _optional as deps
+
 from ..errors import friendly
 from ..services import dataset_service, ml_service
 from .base import AuthState
@@ -80,6 +82,11 @@ class MiningState(AuthState):
     @rx.var
     def has_datasets(self) -> bool:
         return len(self.datasets) > 0
+
+    @rx.var
+    def env_warning(self) -> str:
+        """Preflight: name the missing libraries before the user clicks Run."""
+        return deps.warning(("pandas", "duckdb", "polars", "mlxtend", "sklearn"))
 
     @rx.var
     def has_uploads(self) -> bool:

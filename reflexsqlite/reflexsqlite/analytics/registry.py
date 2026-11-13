@@ -6,6 +6,8 @@ matching engine only when a user selects that library.
 """
 from __future__ import annotations
 
+import importlib
+import sys
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 
@@ -239,10 +241,52 @@ def operations_for(library_id: str) -> list[dict[str, object]]:
     ]
 
 
+def _interpreter() -> str:
+    executable = sys.executable or "python"
+    return f'"{executable}"' if " " in executable else executable
+
+
+def _install_command(spec: "LibrarySpec", *, force: bool = False) -> str:
+    packages = spec.install[len("pip install ") :] if spec.install.startswith("pip install ") else spec.install
+    flag = " --force-reinstall" if force else ""
+    return f"{_interpreter()} -m pip install{flag} {packages}"
+
+
+def install_command(library_id: str, *, force: bool = False) -> str:
+    """Copy-pasteable install command for the interpreter running the backend."""
+    spec = _BY_ID.get(library_id)
+    if spec is None:
+        return ""
+    return _install_command(spec, force=force)
+
+
 def require(library_id: str) -> LibrarySpec:
+    """Return the spec, or explain precisely why it cannot run here.
+
+    Distribution metadata alone is not proof: a package can be registered in
+    ``site-packages`` and still fail to import (blocked DLL, broken wheel). The
+    message therefore names the interpreter that is actually running the
+    backend, because that is the one the user has to fix.
+    """
     spec = get(library_id)
-    if not is_available(spec.id):
+    if is_available(spec.id):
+        return spec
+
+    # Metadata says it is absent - confirm with a real import before blaming it.
+    try:
+        importlib.import_module(spec.module)
+        return spec
+    except Exception as exc:  # noqa: BLE001 - a broken package can raise anything
+        detail = " ".join(str(exc).split())
+        if len(detail) > 160:
+            detail = detail[:159] + "…"
+        if detail and "No module named" not in detail:
+            raise LibraryUnavailableError(
+                f"{spec.name} is installed but cannot be imported in this environment "
+                f"({detail}). Reinstall it with `{_install_command(spec, force=True)}` "
+                f"and restart the app."
+            ) from exc
         raise LibraryUnavailableError(
-            f"{spec.name} is not installed. Run `{spec.install}` and restart the app."
-        )
-    return spec
+            f"{spec.name} is not installed for the Python running this app "
+            f"({sys.executable}). Run `{_install_command(spec)}` and restart the app."
+        ) from exc

@@ -10,6 +10,8 @@ import asyncio
 
 import reflex as rx
 
+from ml_pipelines import _optional as deps
+
 from ..errors import friendly
 from ..services import dataset_service, ml_service
 from .base import AuthState
@@ -58,6 +60,11 @@ class ModelsState(AuthState):
     @rx.var
     def has_datasets(self) -> bool:
         return len(self.datasets) > 0
+
+    @rx.var
+    def env_warning(self) -> str:
+        """Preflight: name the missing libraries before the user clicks Train."""
+        return deps.warning(("pandas", "sklearn", "joblib"))
 
     @rx.var
     def has_models(self) -> bool:

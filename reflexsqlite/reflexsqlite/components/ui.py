@@ -158,14 +158,18 @@ def stat_card(label, value, hint="", color: str = PRIMARY, icon_text=""):
 
 
 def notice_banner(message, kind: str = "error"):
-    is_error = kind == "error"
+    background, foreground, border = {
+        "error": ("#FEF2F2", DANGER, "#FECACA"),
+        "success": ("#ECFDF5", "#047857", "#A7F3D0"),
+        "warning": ("#FFFBEB", "#B45309", "#FDE68A"),
+    }.get(kind, ("#FEF2F2", DANGER, "#FECACA"))
     return rx.cond(
         message != "",
         rx.box(
             rx.text(message, font_size="12px", font_weight="500"),
-            background="#FEF2F2" if is_error else "#ECFDF5",
-            color=DANGER if is_error else "#047857",
-            border=f"1px solid {'#FECACA' if is_error else '#A7F3D0'}",
+            background=background,
+            color=foreground,
+            border=f"1px solid {border}",
             border_radius="10px",
             padding="10px 14px",
             width="100%",

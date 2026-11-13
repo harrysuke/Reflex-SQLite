@@ -131,7 +131,7 @@ def _config_panel():
             ui.primary_button(
                 "Run analysis",
                 on_click=ExploreState.run_analysis,
-                disabled=ExploreState.is_running,
+                disabled=ExploreState.run_disabled,
                 margin_top="14px",
             ),
             gap="12px",
@@ -139,6 +139,32 @@ def _config_panel():
             flex_wrap="wrap",
             width="100%",
             margin_top="14px",
+        ),
+        rx.cond(
+            ExploreState.library_available,
+            rx.fragment(),
+            rx.box(
+                rx.text(
+                    "This library cannot be imported by the Python running the backend, "
+                    "so the analysis would fail. Install it for that interpreter:",
+                    font_size="12px",
+                    font_weight="600",
+                    color="#B45309",
+                ),
+                rx.text(
+                    ExploreState.library_install_command,
+                    font_size="11px",
+                    color=TEXT,
+                    font_family="monospace",
+                    margin_top="4px",
+                ),
+                background="#FFFBEB",
+                border="1px solid #FDE68A",
+                border_radius="10px",
+                padding="10px 14px",
+                width="100%",
+                margin_top="12px",
+            ),
         ),
         ui.notice_banner(ExploreState.explore_error),
         padding="20px",

@@ -1,7 +1,11 @@
 """User settings page state."""
 from __future__ import annotations
 
+import asyncio
+
 import reflex as rx
+
+from ml_pipelines._optional import diagnostics
 
 from ..errors import friendly
 from ..services import settings_service
@@ -37,6 +41,19 @@ class SettingsState(AuthState):
     settings_ok: str = ""
     settings_error: str = ""
 
+    # Live environment audit (see ml_pipelines._optional.diagnostics) --------
+    # Flattened to a single list because Reflex cannot foreach over an untyped
+    # nested key; each item is either a group header or one library row.
+    env_rows: list[dict] = []
+    env_python: str = ""
+    env_version: str = ""
+    env_prefix: str = ""
+    env_ready: bool = False
+    env_fix: str = ""
+    env_issue_count: int = 0
+    env_busy: bool = False
+    env_checked: bool = False
+
     @rx.event
     def load_settings(self):
         if not self._restore():
@@ -58,6 +75,67 @@ class SettingsState(AuthState):
         self.live_refresh_seconds = str(data["live_refresh_seconds"])
         self.live_enabled = bool(data["live_enabled"])
         self.show_advanced = bool(data["show_advanced"])
+        return SettingsState.check_environment
+
+    @rx.event(background=True)
+    async def check_environment(self):
+        """Import every dependency for real and record the outcome.
+
+        Metadata-only checks lie: a package can be registered in site-packages
+        and still fail to import. This runs in a background event because the
+        first import of scipy / sklearn takes a second or two.
+        """
+        async with self:
+            if self.env_busy:
+                return
+            self.env_busy = True
+        try:
+            report = await asyncio.to_thread(diagnostics)
+        except Exception as exc:  # noqa: BLE001 - never break the page
+            async with self:
+                self.env_busy = False
+                self.settings_error = friendly(exc)
+            return
+        python = report.get("python", {})
+        rows: list[dict] = []
+        for group in report.get("groups", []):
+            rows.append(
+                {
+                    "kind": "group",
+                    "tier": group.get("tier", ""),
+                    "required": bool(group.get("required", False)),
+                    "ok": bool(group.get("ok", False)),
+                    "label": "",
+                    "version": "",
+                    "status": "",
+                    "error": "",
+                    "fix": "",
+                }
+            )
+            for row in group.get("rows", []):
+                rows.append(
+                    {
+                        "kind": "row",
+                        "tier": "",
+                        "required": False,
+                        "ok": False,
+                        "label": row.get("label", ""),
+                        "version": row.get("version", ""),
+                        "status": row.get("status", ""),
+                        "error": row.get("error", ""),
+                        "fix": row.get("fix", ""),
+                    }
+                )
+        async with self:
+            self.env_rows = rows
+            self.env_python = str(python.get("executable", ""))
+            self.env_version = str(python.get("version", ""))
+            self.env_prefix = str(python.get("prefix", ""))
+            self.env_ready = bool(report.get("ready", False))
+            self.env_fix = str(report.get("fix", ""))
+            self.env_issue_count = len(report.get("missing", [])) + len(report.get("broken", []))
+            self.env_busy = False
+            self.env_checked = True
 
     @rx.event
     def save_profile(self):

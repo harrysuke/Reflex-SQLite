@@ -396,6 +396,7 @@ def statistics():
     return shell(
         "Statistical Profiling",
         "Automated scipy hypothesis tests, statsmodels OLS regression and ARIMA forecasting",
+        ui.notice_banner(StatisticsState.env_warning, "warning"),
         _controls(),
         _profile_section(),
         _regression_section(),

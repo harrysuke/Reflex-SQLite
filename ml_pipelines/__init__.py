@@ -15,7 +15,15 @@ dependency (xgboost, lightgbm, duckdb, ...) is missing.
 """
 from __future__ import annotations
 
-from ._optional import MissingDependency, availability, require  # noqa: F401
+from ._optional import (  # noqa: F401
+    MissingDependency,
+    availability,
+    diagnostics,
+    install_command,
+    probe,
+    require,
+    requirements_command,
+)
 from .paths import (  # noqa: F401
     database_path,
     ensure_model_dir,
@@ -27,7 +35,11 @@ from .paths import (  # noqa: F401
 __all__ = [
     "MissingDependency",
     "availability",
+    "diagnostics",
+    "install_command",
+    "probe",
     "require",
+    "requirements_command",
     "workspace_root",
     "database_path",
     "models_dir",
