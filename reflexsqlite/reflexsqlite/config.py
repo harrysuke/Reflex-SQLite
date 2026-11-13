@@ -6,12 +6,20 @@ app fails fast on a bad configuration instead of failing deep inside a handler.
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# The standalone ``ml_pipelines`` package lives beside the Reflex project, so
+# add the workspace root to sys.path once. This lets ``import ml_pipelines``
+# work under `reflex run` (whose CWD is the inner project directory) as well as
+# from the CLI.
+WORKSPACE_ROOT = PROJECT_ROOT.parent
+if str(WORKSPACE_ROOT) not in sys.path:
+    sys.path.insert(0, str(WORKSPACE_ROOT))
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 
 

@@ -15,16 +15,45 @@ from .pages import (
     explore,
     landing,
     login_page,
+    mining,
+    models,
     register_page,
     settings_page,
+    statistics,
 )
 from .services import dataset_service
-from .state import AuthState, DashboardState, DatasetState, ExploreState, SettingsState
+from .state import (
+    AuthState,
+    DashboardState,
+    DatasetState,
+    ExploreState,
+    MiningState,
+    ModelsState,
+    SettingsState,
+    StatisticsState,
+)
 
 # Fail-fast bootstrap: schema first, then demo content on an empty database.
 init_db()
 if settings.seed_demo_data:
     dataset_service.seed_demo()
+
+
+def _warm_ml_registry() -> None:
+    """Load the active .joblib model once at backend startup.
+
+    Wrapped defensively: a missing artifact or an absent optional dependency
+    must never stop the web app from booting.
+    """
+    try:
+        from ml_pipelines.inference import warm_start
+
+        warm_start()
+    except Exception:  # pragma: no cover - startup resilience
+        pass
+
+
+_warm_ml_registry()
 
 app = rx.App(
     style={
@@ -54,6 +83,24 @@ app.add_page(
     route="/explore",
     title="Library Workbench · DataForge",
     on_load=[AuthState.require_auth, ExploreState.load_page],
+)
+app.add_page(
+    statistics,
+    route="/statistics",
+    title="Statistical Profiling · DataForge",
+    on_load=[AuthState.require_auth, StatisticsState.load_page],
+)
+app.add_page(
+    models,
+    route="/models",
+    title="Predictive Models · DataForge",
+    on_load=[AuthState.require_auth, ModelsState.load_page],
+)
+app.add_page(
+    mining,
+    route="/mining",
+    title="Data Mining · DataForge",
+    on_load=[AuthState.require_auth, MiningState.load_page],
 )
 app.add_page(
     settings_page,

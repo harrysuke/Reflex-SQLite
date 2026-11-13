@@ -4,7 +4,10 @@ from .dashboard import dashboard
 from .datasets import datasets
 from .explore import explore
 from .landing import landing
+from .mining import mining
+from .models import models
 from .settings import settings_page
+from .statistics import statistics
 
 __all__ = [
     "landing",
@@ -13,5 +16,8 @@ __all__ = [
     "dashboard",
     "datasets",
     "explore",
+    "mining",
+    "models",
     "settings_page",
+    "statistics",
 ]

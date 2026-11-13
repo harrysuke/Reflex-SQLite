@@ -7,13 +7,27 @@ openpyxl>=3.1,<4
 # Data manipulation ---------------------------------------------------------
 numpy>=2.1,<2.3
 pandas>=2.2,<3
+polars>=1.5,<2
+
+# Statistical modelling -----------------------------------------------------
+scipy>=1.14,<2
+statsmodels>=0.14,<1
+
+# Machine learning + serialization ------------------------------------------
+scikit-learn>=1.5,<2
+joblib>=1.4,<2
+
+# Columnar OLAP over SQLite + association rules -----------------------------
+duckdb>=1.1,<2
+mlxtend>=0.23,<1
+
+# Gradient boosting (optional extras; the trainer falls back gracefully) ----
+xgboost>=2.1,<4
+lightgbm>=4.5,<5
 
 # Visualization --------------------------------------------------------------
 matplotlib>=3.9,<4
 seaborn>=0.13,<0.14
-
-# Machine learning -----------------------------------------------------------
-scikit-learn>=1.5,<2
 
 # Optional heavy deep-learning runtimes --------------------------------------
 # Install with:  pip install -r requirements-ml.txt

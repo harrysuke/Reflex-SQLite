@@ -29,6 +29,9 @@ NAV_ITEMS = [
     ("/dashboard", "Dashboard", "DB"),
     ("/datasets", "Datasets", "DS"),
     ("/explore", "Library Workbench", "LB"),
+    ("/statistics", "Statistical Profiling", "SP"),
+    ("/models", "Predictive Models", "ML"),
+    ("/mining", "Data Mining", "DM"),
     ("/settings", "Settings", "ST"),
 ]
 

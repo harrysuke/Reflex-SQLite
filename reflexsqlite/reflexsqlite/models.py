@@ -152,3 +152,68 @@ class MetricPoint(SQLModel, table=True):
     value: float = Field(default=0.0)
     label: str = Field(default="", max_length=32)
     created_at: str = Field(default_factory=now_iso)
+
+
+class ModelLog(SQLModel, table=True):
+    """One inference call: inputs, prediction, and (later) the observed outcome.
+
+    Every CRUD create/update that runs the cached model writes a row here, which
+    is what the drift monitor aggregates into rolling accuracy / MAE.
+    """
+    __tablename__ = "model_logs"
+
+    id: int | None = Field(default=None, primary_key=True)
+    dataset_id: int = Field(default=0, index=True)
+    model_name: str = Field(default="", max_length=120)
+    task: str = Field(default="regression", max_length=32)
+    target: str = Field(default="", max_length=120)
+    input_json: str = Field(default="{}")
+    prediction_json: str = Field(default="{}")
+    predicted_value: float | None = Field(default=None)
+    predicted_label: str = Field(default="", max_length=255)
+    actual_value: float | None = Field(default=None)
+    actual_label: str = Field(default="", max_length=255)
+    correct: bool | None = Field(default=None)
+    created_at: str = Field(default_factory=now_iso)
+    resolved_at: str = Field(default="")
+
+
+class MlModel(SQLModel, table=True):
+    """Registry of trained artifacts.
+
+    The column set deliberately mirrors the table created by
+    ``ml_pipelines.train.register_model_cli`` so the CLI and the web app can
+    write to the same ``ml_models`` table without a migration.
+    """
+    __tablename__ = "ml_models"
+    __table_args__ = (UniqueConstraint("name", name="uq_ml_models_name"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(default="", max_length=120)
+    task: str = Field(default="regression", max_length=32)
+    algorithm: str = Field(default="random_forest", max_length=48)
+    target: str = Field(default="", max_length=120)
+    features_json: str = Field(default="[]")
+    artifact_path: str = Field(default="")
+    metrics_json: str = Field(default="{}")
+    training_rows: int = Field(default=0)
+    is_active: bool = Field(default=False)
+    created_at: str = Field(default_factory=now_iso)
+    updated_at: str = Field(default_factory=now_iso)
+
+    @staticmethod
+    def decode_list(raw: str) -> list[str]:
+        try:
+            value = json.loads(raw or "[]")
+            return [str(v) for v in value] if isinstance(value, list) else []
+        except (ValueError, TypeError):
+            return []
+
+    @staticmethod
+    def decode_dict(raw: str) -> dict[str, Any]:
+        try:
+            value = json.loads(raw or "{}")
+            return value if isinstance(value, dict) else {}
+        except (ValueError, TypeError):
+            return {}
+

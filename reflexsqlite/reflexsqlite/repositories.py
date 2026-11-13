@@ -17,6 +17,8 @@ from .models import (
     Dataset,
     DatasetRow,
     MetricPoint,
+    MlModel,
+    ModelLog,
     User,
     UserSetting,
     now_iso,
@@ -316,3 +318,96 @@ def trim_points(session: Session, dataset_id: int, keep: int = 120) -> None:
         session.delete(record)
     if stale:
         session.flush()
+
+
+# --------------------------------------------------------------------------- #
+# Model registry + inference logs
+# --------------------------------------------------------------------------- #
+
+
+def upsert_ml_model(session: Session, **fields: Any) -> MlModel:
+    """Insert or update a trained model row and mark it active."""
+    name = str(fields.get("name", "")).strip()
+    existing = session.exec(select(MlModel).where(MlModel.name == name)).first()
+    for record in session.exec(select(MlModel).where(MlModel.is_active == True)):  # noqa: E712
+        record.is_active = False
+        session.add(record)
+    if existing is None:
+        record = MlModel(**fields, is_active=True)
+    else:
+        for key, value in fields.items():
+            setattr(existing, key, value)
+        existing.is_active = True
+        existing.updated_at = now_iso()
+        record = existing
+    session.add(record)
+    session.flush()
+    return record
+
+
+def list_ml_models(session: Session, limit: int = 50) -> list[MlModel]:
+    return list(
+        session.exec(select(MlModel).order_by(MlModel.updated_at.desc()).limit(limit))
+    )
+
+
+def get_ml_model(session: Session, name: str) -> MlModel | None:
+    return session.exec(select(MlModel).where(MlModel.name == name)).first()
+
+
+def activate_ml_model(session: Session, name: str) -> MlModel | None:
+    target = session.exec(select(MlModel).where(MlModel.name == name)).first()
+    if target is None:
+        return None
+    for record in session.exec(select(MlModel).where(MlModel.is_active == True)):  # noqa: E712
+        record.is_active = False
+        session.add(record)
+    target.is_active = True
+    target.updated_at = now_iso()
+    session.add(target)
+    session.flush()
+    return target
+
+
+def add_model_log(session: Session, **fields: Any) -> ModelLog:
+    record = ModelLog(**fields)
+    session.add(record)
+    session.flush()
+    return record
+
+
+def list_model_logs(
+    session: Session, dataset_id: int | None = None, limit: int = 100
+) -> list[ModelLog]:
+    query = select(ModelLog)
+    if dataset_id is not None:
+        query = query.where(ModelLog.dataset_id == dataset_id)
+    return list(session.exec(query.order_by(ModelLog.id.desc()).limit(limit)))
+
+
+def resolve_model_log(
+    session: Session,
+    log_id: int,
+    *,
+    actual_value: float | None,
+    actual_label: str,
+    correct: bool | None,
+) -> ModelLog | None:
+    record = session.get(ModelLog, log_id)
+    if record is None:
+        return None
+    record.actual_value = actual_value
+    record.actual_label = actual_label
+    record.correct = correct
+    record.resolved_at = now_iso()
+    session.add(record)
+    session.flush()
+    return record
+
+
+def count_model_logs(session: Session, dataset_id: int | None = None) -> int:
+    query = select(func.count()).select_from(ModelLog)
+    if dataset_id is not None:
+        query = query.where(ModelLog.dataset_id == dataset_id)
+    return session.exec(query).one()
+

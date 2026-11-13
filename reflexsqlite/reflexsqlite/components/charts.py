@@ -132,6 +132,57 @@ def result_chart(data, color: str = PRIMARY, label: str = "Value", secondary=Fal
     )
 
 
+def multi_line_chart(data, series, height: int = 280):
+    """Composed line chart with a Python-defined list of series.
+
+    ``series`` is a list of dicts: ``{"key", "label", "color", "dash", "width"}``.
+    Keys are fixed at build time, which is what Recharts requires.
+    """
+    common = [
+        rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="#EEF1F7", vertical=False),
+        rx.recharts.x_axis(data_key="name", axis_line=False, tick_line=False, height=28),
+        rx.recharts.y_axis(axis_line=False, tick_line=False, width=54),
+    ]
+    if _TOOLTIP is not None:
+        common.append(_TOOLTIP(content_style={"fontSize": "11px", "borderRadius": "8px"}))
+    if _LEGEND is not None:
+        common.append(_LEGEND(icon_type="circle", wrapper_style={"fontSize": "11px"}))
+    lines = []
+    for item in series:
+        options = {
+            "data_key": item["key"],
+            "name": item.get("label", item["key"]),
+            "stroke": item.get("color", PRIMARY),
+            "stroke_width": item.get("width", 2),
+            "dot": False,
+            "type_": item.get("type", "monotone"),
+            "is_animation_active": False,
+        }
+        if item.get("dash"):
+            options["stroke_dasharray"] = item["dash"]
+        lines.append(rx.recharts.line(**options))
+    return rx.recharts.composed_chart(*common, *lines, **_base(data, height))
+
+
+def bar_chart_simple(data, label: str = "Value", color: str = PRIMARY, height: int = 260):
+    """Single-series bar chart for feature importance, lift and segment sizes."""
+    common = [
+        rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="#EEF1F7", vertical=False),
+        rx.recharts.x_axis(data_key="name", axis_line=False, tick_line=False, height=28),
+        rx.recharts.y_axis(axis_line=False, tick_line=False, width=54),
+    ]
+    if _TOOLTIP is not None:
+        common.append(_TOOLTIP(content_style={"fontSize": "11px", "borderRadius": "8px"}))
+    return rx.recharts.bar_chart(
+        *common,
+        rx.recharts.bar(
+            data_key="value", name=label, fill=color, radius=[5, 5, 0, 0],
+            is_animation_active=False,
+        ),
+        **_base(data, height),
+    )
+
+
 def correlation_grid(labels, rows):
     """Compact correlation matrix; each cell has a hover title."""
     def cell(item):

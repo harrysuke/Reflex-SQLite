@@ -1,12 +1,13 @@
 """Dataset manager state: upload, list, paginate, create/edit/delete rows."""
 from __future__ import annotations
 
+import asyncio
 import math
 
 import reflex as rx
 
 from ..errors import friendly
-from ..services import dataset_service
+from ..services import dataset_service, ml_service
 from .base import AuthState
 
 
@@ -30,6 +31,12 @@ class DatasetState(AuthState):
     upload_error: str = ""
     is_uploading: bool = False
 
+    # Automated statistical profiling triggered after an upload lands.
+    profile_status: str = ""
+    last_profile: dict = {}
+    # Most recent model prediction produced by a create/update handler.
+    last_prediction: dict = {}
+
     show_add_dialog: bool = False
     show_edit_dialog: bool = False
     show_meta_dialog: bool = False
@@ -51,6 +58,10 @@ class DatasetState(AuthState):
     @rx.var
     def active_name(self) -> str:
         return str(self.detail.get("name", "No dataset selected"))
+
+    @rx.var
+    def prediction_label(self) -> str:
+        return str(self.last_prediction.get("label", ""))
 
     def _refresh_datasets(self) -> None:
         self.datasets = dataset_service.list_user_datasets(self.user_id, self.dataset_search)
@@ -119,6 +130,34 @@ class DatasetState(AuthState):
             self._refresh_table()
         except Exception as exc:
             self.error = friendly(exc)
+        # Hand off to a background event so the scipy profiling suite never
+        # blocks the upload response.
+        if self.active_dataset_id:
+            return DatasetState.profile_after_upload(self.active_dataset_id)
+
+    @rx.event(background=True)
+    async def profile_after_upload(self, dataset_id: int):
+        """Run the automated statistical profile for a freshly imported dataset."""
+        async with self:
+            self.profile_status = "Profiling upload…"
+            user_id = self.user_id
+        try:
+            report = await asyncio.to_thread(ml_service.run_profile, user_id, int(dataset_id))
+            async with self:
+                self.last_profile = {
+                    "rows": report.get("row_count", 0),
+                    "numeric": report.get("numeric_count", 0),
+                    "completeness": report.get("completeness", 0),
+                    "normality": report.get("normality_rows", [])[:4],
+                }
+                self.profile_status = (
+                    f"Profile ready · {report.get('row_count', 0)} rows · "
+                    f"{report.get('numeric_count', 0)} numeric columns"
+                )
+        except Exception as exc:
+            async with self:
+                self.profile_status = f"Profiling skipped: {friendly(exc)}"
+
 
     @rx.event
     def select_dataset(self, dataset_id: int):
@@ -211,9 +250,15 @@ class DatasetState(AuthState):
     @rx.event
     def save_new_row(self):
         try:
-            dataset_service.add_record(self.user_id, self.active_dataset_id, self.form_values)
+            payload = dict(self.form_values)
+            dataset_service.add_record(self.user_id, self.active_dataset_id, payload)
+            prediction = ml_service.predict_and_log(self.user_id, self.active_dataset_id, payload)
             self.show_add_dialog = False
-            self.notice = "Row added."
+            if prediction:
+                self.last_prediction = prediction
+                self.notice = f"Row added · prediction: {prediction.get('label', '')}"
+            else:
+                self.notice = "Row added."
             self._refresh_datasets()
             self._refresh_detail()
             self._refresh_table()
@@ -223,11 +268,17 @@ class DatasetState(AuthState):
     @rx.event
     def save_edited_row(self):
         try:
+            payload = dict(self.form_values)
             dataset_service.edit_record(
-                self.user_id, self.active_dataset_id, self.editing_row_id, self.form_values
+                self.user_id, self.active_dataset_id, self.editing_row_id, payload
             )
+            prediction = ml_service.predict_and_log(self.user_id, self.active_dataset_id, payload)
             self.show_edit_dialog = False
-            self.notice = "Row updated."
+            if prediction:
+                self.last_prediction = prediction
+                self.notice = f"Row updated · prediction: {prediction.get('label', '')}"
+            else:
+                self.notice = "Row updated."
             self._refresh_table()
         except Exception as exc:
             self.error = friendly(exc)

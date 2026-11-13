@@ -1,0 +1,17 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Reflex runtime / build artifacts
+.states/
+.web/
+
+# SQLite WAL sidecars (the main data/app.db stays tracked)
+*.db-wal
+*.db-shm
+
+# Trained model artifacts
+models/*.joblib
+models/active.json

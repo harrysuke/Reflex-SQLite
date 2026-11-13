@@ -197,7 +197,21 @@ def _table_card():
             margin_top="12px",
         ),
         ui.notice_banner(DatasetState.notice, "success"),
+        ui.notice_banner(DatasetState.profile_status, "success"),
         ui.notice_banner(DatasetState.error),
+        rx.cond(
+            DatasetState.prediction_label != "",
+            rx.hstack(
+                rx.text("Latest prediction", font_size="10px", color=MUTED),
+                rx.text(DatasetState.prediction_label, font_size="13px", font_weight="700", color=PRIMARY),
+                gap="8px",
+                align_items="center",
+                background="#EEF0FF",
+                border_radius="9px",
+                padding="7px 12px",
+                margin_top="8px",
+            ),
+        ),
         padding="20px",
         width="100%",
     )
