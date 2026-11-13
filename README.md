@@ -44,6 +44,8 @@ reflex run
 ```
 OR
 ```bach
+uv init
+uv add reflex
 uv run reflex run
 ```
 
